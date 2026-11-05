@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediCore OS · 患者信息中心</title>
+    <style>
+        :root{
+          --bg:#050a14; --cyan:#00e5ff; --cyan-dim:rgba(0,229,255,.35);
+          --blue:#3a7bff; --green:#2dffb5; --text:#bfe9f5; --muted:#5c7a94;
+          --panel:rgba(8,24,44,.72);
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{min-height:100vh;background:var(--bg);color:var(--text);
+          font-family:"Segoe UI","PingFang SC","Microsoft YaHei",monospace;overflow-x:hidden}
+        .grid{position:fixed;inset:0;z-index:0;
+          background-image:linear-gradient(rgba(0,229,255,.05) 1px,transparent 1px),
+            linear-gradient(90deg,rgba(0,229,255,.05) 1px,transparent 1px);
+          background-size:56px 56px}
+        .glow{position:fixed;border-radius:50%;filter:blur(120px);opacity:.25;z-index:0}
+        .glow.a{width:520px;height:520px;left:-140px;top:-160px;background:#0b3fa8}
+        .glow.b{width:480px;height:480px;right:-120px;bottom:-140px;background:#008ba3}
+
+        header{position:relative;z-index:2;display:flex;justify-content:space-between;
+          align-items:center;padding:16px 32px;font-size:12px;letter-spacing:.18em;color:var(--muted)}
+        header .dot{display:inline-block;width:8px;height:8px;border-radius:50%;
+          background:var(--green);margin-right:8px;box-shadow:0 0 10px var(--green);
+          animation:pulse 1.4s infinite}
+        @keyframes pulse{50%{opacity:.35}}
+        header b{color:var(--cyan);font-weight:600}
+        header a{color:var(--muted);text-decoration:none;transition:.2s}
+        header a:hover{color:var(--cyan)}
+
+        main{position:relative;z-index:2;max-width:980px;margin:24px auto 60px;padding:0 24px}
+        h1{font-size:24px;letter-spacing:.35em;font-weight:600;
+          background:linear-gradient(90deg,var(--cyan),#8fd7ff,var(--cyan));
+          -webkit-background-clip:text;background-clip:text;color:transparent}
+        .sub{font-size:11px;letter-spacing:.4em;color:var(--muted);margin:8px 0 26px}
+
+        .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:26px}
+        .card{background:var(--panel);border:1px solid rgba(0,229,255,.22);border-radius:10px;
+          padding:16px 20px;backdrop-filter:blur(6px)}
+        .card .k{font-size:11px;letter-spacing:.25em;color:var(--muted)}
+        .card .v{font-size:26px;font-weight:700;color:var(--cyan);margin-top:8px;
+          font-variant-numeric:tabular-nums;text-shadow:0 0 14px var(--cyan-dim)}
+        .card .v.green{color:var(--green);text-shadow:0 0 14px rgba(45,255,181,.4)}
+
+        .panel{background:var(--panel);border:1px solid rgba(0,229,255,.22);border-radius:12px;
+          padding:22px 24px;backdrop-filter:blur(6px);border-left:3px solid var(--cyan)}
+        .panel h2{font-size:13px;letter-spacing:.3em;color:var(--muted);margin-bottom:16px;
+          display:flex;justify-content:space-between;align-items:center}
+        .refresh{font-size:11px;color:var(--cyan);border:1px solid var(--cyan-dim);
+          border-radius:99px;padding:5px 16px;cursor:pointer;background:transparent;
+          letter-spacing:.15em;transition:.2s;font-family:inherit}
+        .refresh:hover{background:rgba(0,229,255,.12);box-shadow:0 0 16px var(--cyan-dim)}
+
+        table{width:100%;border-collapse:collapse;font-size:13px}
+        th{font-size:11px;letter-spacing:.2em;color:var(--muted);font-weight:400;
+          text-align:left;padding:10px 12px;border-bottom:1px solid rgba(0,229,255,.25)}
+        td{padding:12px;border-bottom:1px dashed rgba(0,229,255,.14)}
+        tr:hover td{background:rgba(0,229,255,.05)}
+        .tag{display:inline-block;padding:3px 12px;border-radius:99px;font-size:11px;
+          letter-spacing:.1em;border:1px solid rgba(45,255,181,.5);color:var(--green)}
+        .mono{font-variant-numeric:tabular-nums;color:#8fd7ff}
+        .state{text-align:center;padding:36px 0;color:var(--muted);font-size:13px;letter-spacing:.15em}
+        .state.err{color:#ff6b81}
+    </style>
+</head>
+<body>
+<div class="grid"></div>
+<div class="glow a"></div><div class="glow b"></div>
+
+<header>
+    <span><span class="dot"></span><b>MEDICORE</b> · 患者信息中心</span>
+    <span id="clock">--:--:--</span>
+    <a href="/">← 返回初始化页</a>
+</header>
+
+<main>
+    <h1>患者信息管理</h1>
+    <div class="sub">PATIENT INFORMATION CENTER · API /api/patient/list</div>
+
+    <div class="stats">
+        <div class="card"><div class="k">在册患者总数</div><div class="v" id="total">--</div></div>
+        <div class="card"><div class="k">接口状态</div><div class="v green" id="apiState">检测中</div></div>
+        <div class="card"><div class="k">数据编码</div><div class="v">UTF-8</div></div>
+    </div>
+
+    <div class="panel">
+        <h2>PATIENT LIST <button class="refresh" onclick="load()">刷 新</button></h2>
+        <table>
+            <thead>
+                <tr><th>ID</th><th>姓名</th><th>身份证号</th><th>联系电话</th><th>状态</th></tr>
+            </thead>
+            <tbody id="tbody">
+                <tr><td colspan="5" class="state">正在加载数据…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<script>
+    setInterval(()=>{
+      document.getElementById('clock').textContent =
+        new Date().toLocaleTimeString('zh-CN',{hour12:false});
+    },1000);
+
+    async function load(){
+      const tbody = document.getElementById('tbody');
+      tbody.innerHTML = '<tr><td colspan="5" class="state">正在加载数据…</td></tr>';
+      try{
+        const res = await fetch('/api/patient/list');
+        const json = await res.json();
+        if(json.code !== 200) throw new Error(json.message || '接口返回异常');
+        const list = json.data || [];
+        document.getElementById('total').textContent = list.length;
+        document.getElementById('apiState').textContent = '正常';
+        if(list.length === 0){
+          tbody.innerHTML = '<tr><td colspan="5" class="state">暂无患者数据</td></tr>';
+          return;
+        }
+        tbody.innerHTML = list.map(p =>
+          '<tr><td class="mono">#' + p.id + '</td><td>' + p.name + '</td>' +
+          '<td class="mono">' + p.idCard + '</td><td class="mono">' + p.phone + '</td>' +
+          '<td><span class="tag">在册</span></td></tr>'
+        ).join('');
+      }catch(e){
+        document.getElementById('apiState').textContent = '异常';
+        tbody.innerHTML = '<tr><td colspan="5" class="state err">数据加载失败：' + e.message + '</td></tr>';
+      }
+    }
+    load();
+</script>
+</body>
+</html>

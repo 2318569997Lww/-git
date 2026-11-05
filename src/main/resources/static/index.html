@@ -316,9 +316,8 @@
       setTimeout(()=>document.getElementById('done').classList.add('show'),500);
     }
     function enterSystem(){
-      document.getElementById('done').innerHTML =
-        '<h2 style="color:var(--cyan)">欢迎回来，医生</h2>' +
-        '<p style="color:var(--muted);font-size:13px;letter-spacing:.2em">此处可跳转到主系统页面</p>';
+      // 初始化完成后跳转到患者信息中心主页面
+      window.location.href = '/patients.html';
     }
 </script>
 </body>
