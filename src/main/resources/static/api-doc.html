@@ -210,6 +210,11 @@
       const id = document.getElementById('pid').value.trim() || '1';
       run('/api/patient/' + encodeURIComponent(id), 'out3');
     }
+
+    // 页面加载后自动发起一次真实请求，方便直接查看各接口返回结果
+    run('/api/hello', 'out1');
+    run('/api/patient/list', 'out2');
+    run('/api/patient/1', 'out3');
 </script>
 </body>
 </html>
