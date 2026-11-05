@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediCore OS · 系统运行自检</title>
+    <style>
+        :root{
+          --bg:#050a14; --cyan:#00e5ff; --cyan-dim:rgba(0,229,255,.35);
+          --blue:#3a7bff; --green:#2dffb5; --text:#bfe9f5; --muted:#5c7a94;
+          --panel:rgba(8,24,44,.72); --red:#ff6b81;
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{min-height:100vh;background:var(--bg);color:var(--text);
+          font-family:"Segoe UI","PingFang SC","Microsoft YaHei",monospace;overflow-x:hidden}
+        .grid{position:fixed;inset:0;z-index:0;
+          background-image:linear-gradient(rgba(0,229,255,.05) 1px,transparent 1px),
+            linear-gradient(90deg,rgba(0,229,255,.05) 1px,transparent 1px);
+          background-size:56px 56px}
+        .glow{position:fixed;border-radius:50%;filter:blur(120px);opacity:.25;z-index:0}
+        .glow.a{width:520px;height:520px;left:-140px;top:-160px;background:#0b3fa8}
+        .glow.b{width:480px;height:480px;right:-120px;bottom:-140px;background:#008ba3}
+
+        header{position:relative;z-index:2;display:flex;justify-content:space-between;
+          align-items:center;padding:16px 32px;font-size:12px;letter-spacing:.18em;color:var(--muted)}
+        header .dot{display:inline-block;width:8px;height:8px;border-radius:50%;
+          background:var(--green);margin-right:8px;box-shadow:0 0 10px var(--green);
+          animation:pulse 1.4s infinite}
+        @keyframes pulse{50%{opacity:.35}}
+        header b{color:var(--cyan);font-weight:600}
+        header .nav a{color:var(--muted);text-decoration:none;transition:.2s;margin-left:18px}
+        header .nav a:hover,header .nav a.on{color:var(--cyan)}
+
+        main{position:relative;z-index:2;max-width:980px;margin:24px auto 60px;padding:0 24px}
+        h1{font-size:24px;letter-spacing:.35em;font-weight:600;
+          background:linear-gradient(90deg,var(--cyan),#8fd7ff,var(--cyan));
+          -webkit-background-clip:text;background-clip:text;color:transparent}
+        .sub{font-size:11px;letter-spacing:.4em;color:var(--muted);margin:8px 0 26px}
+
+        /* 主状态卡 */
+        .hero{background:var(--panel);border:1px solid rgba(0,229,255,.22);
+          border-radius:12px;padding:34px 28px;backdrop-filter:blur(6px);
+          border-left:3px solid var(--green);display:flex;align-items:center;gap:28px}
+        .badge{position:relative;flex:0 0 96px;height:96px;border-radius:50%;
+          border:2px solid rgba(45,255,181,.55);display:flex;align-items:center;
+          justify-content:center;box-shadow:0 0 32px rgba(45,255,181,.25) inset,
+          0 0 24px rgba(45,255,181,.18)}
+        .badge svg{filter:drop-shadow(0 0 6px var(--green))}
+        .hero-info{flex:1;min-width:0}
+        .hero-info .t{font-size:20px;letter-spacing:.25em;color:var(--green);
+          text-shadow:0 0 20px rgba(45,255,181,.45)}
+        .hero-info .d{font-size:13px;color:var(--text);margin-top:12px;letter-spacing:.08em}
+        .hero-info .meta{font-size:11px;color:var(--muted);margin-top:14px;letter-spacing:.15em}
+        .hero-info .meta span{margin-right:20px}
+        .hero-info .meta b{color:var(--cyan);font-weight:600}
+
+        /* 指标卡 */
+        .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+          gap:16px;margin:26px 0}
+        .card{background:var(--panel);border:1px solid rgba(0,229,255,.22);
+          border-radius:10px;padding:16px 20px;backdrop-filter:blur(6px)}
+        .card .k{font-size:11px;letter-spacing:.22em;color:var(--muted)}
+        .card .v{font-size:24px;font-weight:700;color:var(--cyan);margin-top:8px;
+          font-variant-numeric:tabular-nums;text-shadow:0 0 14px var(--cyan-dim)}
+        .card .v.green{color:var(--green);text-shadow:0 0 14px rgba(45,255,181,.4)}
+        .card .v.muted{font-size:15px;color:#8fd7ff;text-shadow:none;letter-spacing:.05em}
+
+        .panel{background:var(--panel);border:1px solid rgba(0,229,255,.22);
+          border-radius:12px;padding:22px 24px;backdrop-filter:blur(6px);
+          border-left:3px solid var(--cyan)}
+        .panel h2{font-size:13px;letter-spacing:.3em;color:var(--muted);
+          margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+        .refresh{font-size:11px;color:var(--cyan);border:1px solid var(--cyan-dim);
+          border-radius:99px;padding:5px 16px;cursor:pointer;background:transparent;
+          letter-spacing:.15em;transition:.2s;font-family:inherit}
+        .refresh:hover{background:rgba(0,229,255,.12);box-shadow:0 0 16px var(--cyan-dim)}
+
+        .json{background:rgba(2,8,18,.72);border:1px solid rgba(0,229,255,.18);
+          border-radius:8px;padding:16px 18px;font-size:13px;line-height:1.9;
+          white-space:pre-wrap;word-break:break-all;color:var(--text);min-height:90px}
+        .jk{color:#7fd9ff}
+        .js{color:#2dffb5}
+        .jn{color:#ffd479}
+        .err{color:var(--red)}
+    </style>
+</head>
+<body>
+<div class="grid"></div>
+<div class="glow a"></div><div class="glow b"></div>
+
+<header>
+    <span><span class="dot"></span><b>MEDICORE</b> · 系统运行自检</span>
+    <span>接口 <b>GET /api/hello</b></span>
+    <span class="nav">
+        <a href="/patients.html">患者中心</a>
+        <a href="/api-doc.html">接口文档</a>
+        <a href="/">初始化页</a>
+    </span>
+</header>
+
+<main>
+    <h1>系统运行自检</h1>
+    <div class="sub">HEALTH &amp; HELLO CHECK · API /api/hello</div>
+
+    <div class="hero">
+        <div class="badge" id="badge">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                <path d="M12 3v18M3 12h18" stroke="#00e5ff" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <div class="hero-info">
+            <div class="t" id="heroTitle">正在连接后端服务…</div>
+            <div class="d" id="heroDesc">正在请求 /api/hello 接口，请稍候</div>
+            <div class="meta">
+                <span>状态码 <b id="mCode">--</b></span>
+                <span>响应耗时 <b id="mTime">-- ms</b></span>
+                <span>主机 <b id="mHost">localhost</b></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="card"><div class="k">SERVICE</div><div class="v green" id="sService">检测中</div></div>
+        <div class="card"><div class="k">FRAMEWORK</div><div class="v muted">Spring Boot 3.2.0</div></div>
+        <div class="card"><div class="k">RUNTIME</div><div class="v muted">JDK 17 · Tomcat</div></div>
+        <div class="card"><div class="k">ENCODING</div><div class="v muted">UTF-8</div></div>
+    </div>
+
+    <div class="panel">
+        <h2>RESPONSE PAYLOAD <button class="refresh" onclick="check()">重 新 检 测</button></h2>
+        <div class="json" id="json">等待检测结果…</div>
+    </div>
+</main>
+
+<script>
+    function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // 显示当前实际访问的主机地址，避免端口写死
+    document.getElementById('mHost').textContent = location.host;
+
+    function pretty(obj){
+      const txt = JSON.stringify(obj, null, 2);
+      return esc(txt).replace(/"([^"]+)"(\s*:)?/g, function(m, k, colon){
+        return colon ? '<span class="jk">"' + k + '"</span>' + colon
+                     : '<span class="js">"' + k + '"</span>';
+      }).replace(/\b(\d+)\b/g, '<span class="jn">$1</span>');
+    }
+
+    async function check(){
+      const t0 = performance.now();
+      const jsonEl = document.getElementById('json');
+      jsonEl.innerHTML = '正在请求…';
+      try{
+        const res = await fetch('/api/hello');
+        const cost = Math.round(performance.now() - t0);
+        const data = await res.json();
+        document.getElementById('mCode').textContent = data.code;
+        document.getElementById('mTime').textContent = cost + ' ms';
+        if(data.code !== 200) throw new Error(data.message || '接口返回异常');
+        document.getElementById('heroTitle').textContent = '服务运行正常';
+        document.getElementById('heroDesc').textContent = data.data;
+        document.getElementById('sService').textContent = '在线';
+        document.querySelector('.hero').style.borderLeftColor = 'var(--green)';
+        document.getElementById('badge').innerHTML =
+          '<svg width="42" height="42" viewBox="0 0 24 24" fill="none">' +
+          '<circle cx="12" cy="12" r="10" stroke="#2dffb5" stroke-width="1.4"/>' +
+          '<path d="M7.5 12.5l3 3 6-6.5" stroke="#2dffb5" stroke-width="2" stroke-linecap="round"/></svg>';
+        jsonEl.innerHTML = pretty(data);
+      }catch(e){
+        const cost = Math.round(performance.now() - t0);
+        document.getElementById('mCode').textContent = 'ERR';
+        document.getElementById('mTime').textContent = cost + ' ms';
+        document.getElementById('heroTitle').textContent = '服务连接失败';
+        document.getElementById('heroDesc').textContent = e.message;
+        document.getElementById('sService').textContent = '离线';
+        document.getElementById('sService').style.color = 'var(--red)';
+        document.querySelector('.hero').style.borderLeftColor = 'var(--red)';
+        jsonEl.innerHTML = '<span class="err">请求失败：' + esc(e.message) + '</span>';
+      }
+    }
+    check();
+</script>
+</body>
+</html>

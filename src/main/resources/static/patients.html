@@ -28,8 +28,8 @@
           animation:pulse 1.4s infinite}
         @keyframes pulse{50%{opacity:.35}}
         header b{color:var(--cyan);font-weight:600}
-        header a{color:var(--muted);text-decoration:none;transition:.2s}
-        header a:hover{color:var(--cyan)}
+        header a{color:var(--muted);text-decoration:none;transition:.2s;margin-left:18px}
+        header a:hover,header a.on{color:var(--cyan)}
 
         main{position:relative;z-index:2;max-width:980px;margin:24px auto 60px;padding:0 24px}
         h1{font-size:24px;letter-spacing:.35em;font-weight:600;
@@ -73,7 +73,11 @@
 <header>
     <span><span class="dot"></span><b>MEDICORE</b> · 患者信息中心</span>
     <span id="clock">--:--:--</span>
-    <a href="/">← 返回初始化页</a>
+    <span>
+        <a href="/hello.html">运行自检</a>
+        <a href="/api-doc.html">接口文档</a>
+        <a href="/">返回初始化页</a>
+    </span>
 </header>
 
 <main>
