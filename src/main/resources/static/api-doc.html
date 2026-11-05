@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediCore OS · 接口文档中心</title>
+    <style>
+        :root{
+          --bg:#050a14; --cyan:#00e5ff; --cyan-dim:rgba(0,229,255,.35);
+          --blue:#3a7bff; --green:#2dffb5; --text:#bfe9f5; --muted:#5c7a94;
+          --panel:rgba(8,24,44,.72); --red:#ff6b81; --amber:#ffd479;
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{min-height:100vh;background:var(--bg);color:var(--text);
+          font-family:"Segoe UI","PingFang SC","Microsoft YaHei",monospace;overflow-x:hidden}
+        .grid{position:fixed;inset:0;z-index:0;
+          background-image:linear-gradient(rgba(0,229,255,.05) 1px,transparent 1px),
+            linear-gradient(90deg,rgba(0,229,255,.05) 1px,transparent 1px);
+          background-size:56px 56px}
+        .glow{position:fixed;border-radius:50%;filter:blur(120px);opacity:.25;z-index:0}
+        .glow.a{width:520px;height:520px;left:-140px;top:-160px;background:#0b3fa8}
+        .glow.b{width:480px;height:480px;right:-120px;bottom:-140px;background:#008ba3}
+
+        header{position:relative;z-index:2;display:flex;justify-content:space-between;
+          align-items:center;padding:16px 32px;font-size:12px;letter-spacing:.18em;color:var(--muted)}
+        header .dot{display:inline-block;width:8px;height:8px;border-radius:50%;
+          background:var(--green);margin-right:8px;box-shadow:0 0 10px var(--green);
+          animation:pulse 1.4s infinite}
+        @keyframes pulse{50%{opacity:.35}}
+        header b{color:var(--cyan);font-weight:600}
+        header .nav a{color:var(--muted);text-decoration:none;transition:.2s;margin-left:18px}
+        header .nav a:hover,header .nav a.on{color:var(--cyan)}
+
+        main{position:relative;z-index:2;max-width:1000px;margin:24px auto 60px;padding:0 24px}
+        h1{font-size:24px;letter-spacing:.35em;font-weight:600;
+          background:linear-gradient(90deg,var(--cyan),#8fd7ff,var(--cyan));
+          -webkit-background-clip:text;background-clip:text;color:transparent}
+        .sub{font-size:11px;letter-spacing:.4em;color:var(--muted);margin:8px 0 26px}
+
+        .api{background:var(--panel);border:1px solid rgba(0,229,255,.22);
+          border-radius:12px;margin-bottom:20px;overflow:hidden;backdrop-filter:blur(6px)}
+        .api-head{display:flex;align-items:center;gap:14px;padding:16px 22px;
+          border-bottom:1px solid rgba(0,229,255,.16)}
+        .method{font-size:11px;letter-spacing:.15em;padding:4px 12px;border-radius:6px;
+          border:1px solid rgba(45,255,181,.5);color:var(--green)}
+        .path{font-size:15px;color:#8fd7ff;letter-spacing:.05em}
+        .desc{margin-left:auto;font-size:12px;color:var(--muted);letter-spacing:.1em}
+        .api-body{padding:20px 22px}
+
+        .block{margin-bottom:16px}
+        .block .lbl{font-size:11px;letter-spacing:.25em;color:var(--muted);margin-bottom:10px}
+        .json{background:rgba(2,8,18,.72);border:1px solid rgba(0,229,255,.18);
+          border-radius:8px;padding:14px 16px;font-size:12.5px;line-height:1.85;
+          white-space:pre-wrap;word-break:break-all;color:var(--text)}
+        .jk{color:#7fd9ff}.js{color:#2dffb5}.jn{color:#ffd479}.err{color:var(--red)}
+
+        table{width:100%;border-collapse:collapse;font-size:12.5px}
+        th{font-size:11px;letter-spacing:.2em;color:var(--muted);font-weight:400;
+          text-align:left;padding:8px 10px;border-bottom:1px solid rgba(0,229,255,.25)}
+        td{padding:9px 10px;border-bottom:1px dashed rgba(0,229,255,.12)}
+        td.col{color:#8fd7ff;font-variant-numeric:tabular-nums}
+
+        .run{font-size:11px;color:var(--cyan);border:1px solid var(--cyan-dim);
+          border-radius:99px;padding:6px 18px;cursor:pointer;background:transparent;
+          letter-spacing:.15em;transition:.2s;font-family:inherit}
+        .run:hover{background:rgba(0,229,255,.12);box-shadow:0 0 16px var(--cyan-dim)}
+        .run:active{transform:scale(.97)}
+        .need-id{display:inline-flex;align-items:center;gap:8px;margin-left:10px}
+        .need-id input{width:70px;background:rgba(2,8,18,.8);border:1px solid var(--cyan-dim);
+          border-radius:6px;color:var(--cyan);padding:5px 10px;font-family:inherit;font-size:12px;outline:none}
+    </style>
+</head>
+<body>
+<div class="grid"></div>
+<div class="glow a"></div><div class="glow b"></div>
+
+<header>
+    <span><span class="dot"></span><b>MEDICORE</b> · 接口文档中心</span>
+    <span>BASE URL <b id="baseUrl">http://localhost</b></span>
+    <span class="nav">
+        <a href="/patients.html">患者中心</a>
+        <a href="/hello.html">运行自检</a>
+        <a href="/">初始化页</a>
+    </span>
+</header>
+
+<main>
+    <h1>接口文档中心</h1>
+    <div class="sub">API DOCUMENTATION &amp; ONLINE DEBUG · REST</div>
+
+    <!-- 1. /api/hello -->
+    <div class="api">
+        <div class="api-head">
+            <span class="method">GET</span>
+            <span class="path">/api/hello</span>
+            <span class="desc">系统初始化连通性测试接口</span>
+        </div>
+        <div class="api-body">
+            <div class="block">
+                <div class="lbl">响应示例</div>
+                <div class="json">{
+  "code": 200,
+  "message": "操作成功",
+  "data": "医疗系统初始化成功！环境搭建完毕！"
+}</div>
+            </div>
+            <div class="block">                
+                <button class="run" onclick="run('/api/hello','out1')">在 线 调 试</button>
+            </div>
+            <div class="block">
+                <div class="lbl">调试结果</div>
+                <div class="json" id="out1">点击“在线调试”发起真实请求…</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. /api/patient/list -->
+    <div class="api">
+        <div class="api-head">
+            <span class="method">GET</span>
+            <span class="path">/api/patient/list</span>
+            <span class="desc">查询在册患者列表</span>
+        </div>
+        <div class="api-body">
+            <div class="block">
+                <div class="lbl">请求参数</div>
+                <table>
+                    <tr><th>参数</th><th>位置</th><th>类型</th><th>必填</th><th>说明</th></tr>
+                    <tr><td>—</td><td>—</td><td>—</td><td>否</td><td>无参数，直接返回全部患者</td></tr>
+                </table>
+            </div>
+            <div class="block">
+                <div class="lbl">响应字段</div>
+                <table>
+                    <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+                    <tr><td class="col">code</td><td>Integer</td><td>状态码，200 表示成功</td></tr>
+                    <tr><td class="col">message</td><td>String</td><td>提示信息</td></tr>
+                    <tr><td class="col">data[].id</td><td>Integer</td><td>患者主键 ID</td></tr>
+                    <tr><td class="col">data[].name</td><td>String</td><td>患者姓名</td></tr>
+                    <tr><td class="col">data[].idCard</td><td>String</td><td>身份证号（18 位）</td></tr>
+                    <tr><td class="col">data[].phone</td><td>String</td><td>联系电话（11 位）</td></tr>
+                </table>
+            </div>
+            <div class="block">
+                <button class="run" onclick="run('/api/patient/list','out2')">在 线 调 试</button>
+            </div>
+            <div class="block">
+                <div class="lbl">调试结果</div>
+                <div class="json" id="out2">点击“在线调试”发起真实请求…</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. /api/patient/{id} -->
+    <div class="api">
+        <div class="api-head">
+            <span class="method">GET</span>
+            <span class="path">/api/patient/{id}</span>
+            <span class="desc">按 ID 查询单个患者</span>
+        </div>
+        <div class="api-body">
+            <div class="block">
+                <div class="lbl">路径参数</div>
+                <table>
+                    <tr><th>参数</th><th>位置</th><th>类型</th><th>必填</th><th>说明</th></tr>
+                    <tr><td class="col">id</td><td>path</td><td>Integer</td><td>是</td><td>患者 ID，如 1；不存在时返回“未找到该患者”</td></tr>
+                </table>
+            </div>
+            <div class="block">
+                <button class="run" onclick="runById()">在 线 调 试</button>
+                <span class="need-id">ID<input id="pid" value="1" /></span>
+            </div>
+            <div class="block">
+                <div class="lbl">调试结果</div>
+                <div class="json" id="out3">点击“在线调试”发起真实请求…</div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // 动态显示当前服务地址，避免端口写死
+    document.getElementById('baseUrl').textContent = location.origin;
+    function pretty(obj){
+      const txt = JSON.stringify(obj, null, 2);
+      return esc(txt).replace(/"([^"]+)"(\s*:)?/g, function(m, k, colon){
+        return colon ? '<span class="jk">"' + k + '"</span>' + colon
+                     : '<span class="js">"' + k + '"</span>';
+      }).replace(/\b(\d+)\b/g, '<span class="jn">$1</span>');
+    }
+
+    async function run(url, target){
+      const el = document.getElementById(target);
+      el.innerHTML = '请求中…';
+      const t0 = performance.now();
+      try{
+        const res = await fetch(url);
+        const data = await res.json();
+        const cost = Math.round(performance.now() - t0);
+        el.innerHTML = pretty(data) +
+          '\n<span class="jn">// HTTP ' + res.status + ' · ' + cost + ' ms</span>';
+      }catch(e){
+        el.innerHTML = '<span class="err">请求失败：' + esc(e.message) + '</span>';
+      }
+    }
+
+    function runById(){
+      const id = document.getElementById('pid').value.trim() || '1';
+      run('/api/patient/' + encodeURIComponent(id), 'out3');
+    }
+</script>
+</body>
+</html>
