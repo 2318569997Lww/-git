@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediCore OS · 系统初始化</title>
+    <style>
+        :root{
+          --bg:#050a14;
+          --cyan:#00e5ff;
+          --cyan-dim:rgba(0,229,255,.35);
+          --blue:#3a7bff;
+          --green:#2dffb5;
+          --text:#bfe9f5;
+          --muted:#5c7a94;
+          --panel:rgba(8,24,44,.72);
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+          font-family:"Segoe UI","PingFang SC","Microsoft YaHei",monospace}
+
+        /* ---------- 背景层 ---------- */
+        #bg{position:fixed;inset:0;z-index:0}
+        .grid{position:absolute;inset:-50%;
+          background-image:
+            linear-gradient(rgba(0,229,255,.06) 1px,transparent 1px),
+            linear-gradient(90deg,rgba(0,229,255,.06) 1px,transparent 1px);
+          background-size:56px 56px;
+          animation:gridmove 6s linear infinite;
+          transform:perspective(600px) rotateX(55deg) translateY(-8%);
+          transform-origin:center 30%;
+        }
+        @keyframes gridmove{to{background-position:0 56px,56px 0}}
+        .glow{position:absolute;border-radius:50%;filter:blur(120px);opacity:.28}
+        .glow.a{width:560px;height:560px;left:-140px;top:-160px;background:#0b3fa8}
+        .glow.b{width:520px;height:520px;right:-140px;bottom:-160px;background:#008ba3}
+
+        /* ---------- 顶部状态栏 ---------- */
+        header{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;
+          justify-content:space-between;align-items:center;padding:14px 28px;
+          font-size:12px;letter-spacing:.18em;color:var(--muted)}
+        header .dot{display:inline-block;width:8px;height:8px;border-radius:50%;
+          background:var(--green);margin-right:8px;box-shadow:0 0 10px var(--green);
+          animation:pulse 1.4s infinite}
+        @keyframes pulse{50%{opacity:.35}}
+        header b{color:var(--cyan);font-weight:600}
+
+        /* ---------- 中央核心 ---------- */
+        main{position:relative;z-index:5;height:100%;display:flex;flex-direction:column;
+          align-items:center;justify-content:center;gap:26px}
+        .ring-wrap{position:relative;width:220px;height:220px}
+        .ring{position:absolute;inset:0;border-radius:50%;border:1px solid transparent}
+        .ring.r1{border-top-color:var(--cyan);border-right-color:var(--cyan-dim);
+          animation:spin 2.2s linear infinite}
+        .ring.r2{inset:16px;border-top-color:var(--blue);border-left-color:var(--cyan-dim);
+          animation:spin 3.4s linear infinite reverse}
+        .ring.r3{inset:32px;border-bottom-color:var(--green);
+          animation:spin 4.6s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .core{position:absolute;inset:52px;border-radius:50%;
+          background:radial-gradient(circle at 35% 30%,rgba(0,229,255,.25),rgba(5,12,26,.9) 65%);
+          border:1px solid var(--cyan-dim);
+          box-shadow:0 0 40px rgba(0,229,255,.25),inset 0 0 30px rgba(0,229,255,.12);
+          display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px}
+        .core svg{filter:drop-shadow(0 0 8px var(--cyan))}
+        .core .pct{font-size:30px;font-weight:700;color:var(--cyan);
+          text-shadow:0 0 18px var(--cyan-dim);font-variant-numeric:tabular-nums}
+
+        h1{font-size:30px;letter-spacing:.42em;text-indent:.42em;font-weight:600;
+          background:linear-gradient(90deg,var(--cyan),#8fd7ff,var(--cyan));
+          -webkit-background-clip:text;background-clip:text;color:transparent;
+          animation:hue 4s linear infinite;background-size:200%}
+        @keyframes hue{to{background-position:200%}}
+        .sub{font-size:12px;letter-spacing:.5em;text-indent:.5em;color:var(--muted)}
+
+        /* ---------- 进度条 ---------- */
+        .bar{width:min(520px,80vw);height:4px;border-radius:99px;overflow:hidden;
+          background:rgba(0,229,255,.12);position:relative}
+        .bar i{position:absolute;inset:0 100% 0 0;border-radius:99px;
+          background:linear-gradient(90deg,var(--blue),var(--cyan));
+          box-shadow:0 0 16px var(--cyan);transition:inset .25s ease}
+        .stage{margin-top:-12px;font-size:13px;letter-spacing:.2em;color:var(--text);
+          min-height:20px}
+        .stage::before{content:"▸ ";color:var(--cyan)}
+
+        /* ---------- 左右面板 ---------- */
+        .panel{position:fixed;top:50%;transform:translateY(-50%);z-index:6;
+          width:250px;padding:18px 20px;background:var(--panel);
+          border:1px solid rgba(0,229,255,.22);border-radius:10px;backdrop-filter:blur(6px);
+          font-size:12px}
+        .panel.left{left:34px;border-left:3px solid var(--cyan)}
+        .panel.right{right:34px;border-right:3px solid var(--blue)}
+        .panel h3{font-size:11px;letter-spacing:.3em;color:var(--muted);
+          margin-bottom:12px;display:flex;justify-content:space-between}
+        .row{display:flex;justify-content:space-between;padding:5px 0;
+          border-bottom:1px dashed rgba(0,229,255,.14);color:var(--text)}
+        .row:last-child{border-bottom:none}
+        .row .v{color:var(--cyan);font-variant-numeric:tabular-nums}
+        .ok{color:var(--green)!important}
+        .row .status{font-size:11px;letter-spacing:.1em}
+
+        /* ---------- 底部日志 & ECG ---------- */
+        .dock{position:fixed;bottom:0;left:0;right:0;z-index:6;padding:10px 28px 12px;
+          background:linear-gradient(transparent,rgba(3,8,18,.92) 40%)}
+        #log{height:88px;overflow:hidden;font-size:11.5px;line-height:1.8;color:var(--muted)}
+        #log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        #log .t{color:#3f5f78;margin-right:8px}
+        #log .good{color:var(--green)}
+        #ecg{display:block;width:100%;height:56px;margin-top:4px}
+
+        /* ---------- 完成遮罩 ---------- */
+        #done{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;
+          align-items:center;justify-content:center;gap:18px;background:rgba(3,8,18,.86);
+          backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .8s}
+        #done.show{opacity:1;pointer-events:auto}
+        #done h2{font-size:26px;letter-spacing:.35em;text-indent:.35em;color:var(--green);
+          text-shadow:0 0 24px rgba(45,255,181,.5)}
+        #btn{padding:12px 46px;font-size:14px;letter-spacing:.3em;text-indent:.3em;
+          color:var(--cyan);background:transparent;border:1px solid var(--cyan);
+          border-radius:99px;cursor:pointer;transition:.25s;font-family:inherit}
+        #btn:hover{background:rgba(0,229,255,.12);box-shadow:0 0 24px var(--cyan-dim)}
+
+        .scanline{position:fixed;inset:0;z-index:30;pointer-events:none;
+          background:repeating-linear-gradient(0deg,rgba(255,255,255,.02) 0 1px,transparent 1px 3px)}
+
+        @media(max-width:900px){.panel{display:none}h1{font-size:20px}}
+    </style>
+    <base target="_blank">
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+<div class="grid"></div>
+<div class="glow a"></div><div class="glow b"></div>
+
+<header>
+    <span><span class="dot"></span><b>MEDICORE</b> · 医疗影像云平台 v5.2.1</span>
+    <span id="clock">--:--:--</span>
+    <span>节点 <b>CN-EAST-07</b> · 安全通道 AES-256</span>
+</header>
+
+<main>
+    <div class="ring-wrap">
+        <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div>
+        <div class="core">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+                <path d="M12 4v16M4 12h16" stroke="#00e5ff" stroke-width="2.4" stroke-linecap="round"/>
+            </svg>
+            <div class="pct" id="pct">0%</div>
+        </div>
+    </div>
+    <h1>医疗系统初始化</h1>
+    <div class="sub">MEDICAL SYSTEM BOOT SEQUENCE</div>
+    <div class="bar"><i id="fill"></i></div>
+    <div class="stage" id="stage">正在启动核心服务…</div>
+</main>
+
+<aside class="panel left">
+    <h3>SYSTEM DIAGNOSTICS <span>LIVE</span></h3>
+    <div class="row"><span>CPU 负载</span><span class="v" id="cpu">--%</span></div>
+    <div class="row"><span>内存占用</span><span class="v" id="mem">--%</span></div>
+    <div class="row"><span>网络延迟</span><span class="v" id="net">--ms</span></div>
+    <div class="row"><span>核心温度</span><span class="v" id="temp">--°C</span></div>
+    <div class="row"><span>磁盘 I/O</span><span class="v" id="io">--MB/s</span></div>
+    <div class="row"><span>数据库连接</span><span class="v status ok" id="db">正常</span></div>
+</aside>
+
+<aside class="panel right">
+    <h3>MODULE CHECKLIST <span id="modDone">0/7</span></h3>
+    <div class="row"><span>核心引擎 Core Engine</span><span class="v status" data-mod>--</span></div>
+    <div class="row"><span>数据库 Database</span><span class="v status" data-mod>--</span></div>
+    <div class="row"><span>DICOM 影像网关</span><span class="v status" data-mod>--</span></div>
+    <div class="row"><span>AI 辅助诊断模型</span><span class="v status" data-mod>--</span></div>
+    <div class="row"><span>患者档案同步</span><span class="v status" data-mod>--</span></div>
+    <div class="row"><span>接口网关 Gateway</span><span class="v status" data-mod>--</span></div>
+    <div class="row"><span>安全审计模块</span><span class="v status" data-mod>--</span></div>
+</aside>
+
+<div class="dock">
+    <div id="log"></div>
+    <canvas id="ecg"></canvas>
+</div>
+
+<div id="done">
+    <svg width="72" height="72" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="10" stroke="#2dffb5" stroke-width="1.6"/>
+        <path d="M7.5 12.5l3 3 6-6.5" stroke="#2dffb5" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <h2>初始化完成</h2>
+    <p style="color:var(--muted);font-size:13px;letter-spacing:.2em">全部模块加载成功，系统就绪</p>
+    <button id="btn" onclick="enterSystem()">进 入 系 统</button>
+</div>
+
+<div class="scanline"></div>
+
+<script>
+    /* ================= 背景粒子 ================= */
+    const bg = document.getElementById('bg'), bctx = bg.getContext('2d');
+    let W, H, pts = [];
+    function resize(){ W = bg.width = innerWidth; H = bg.height = innerHeight; }
+    addEventListener('resize', resize); resize();
+    for(let i=0;i<90;i++) pts.push({
+      x:Math.random()*W, y:Math.random()*H,
+      vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3, r:Math.random()*1.6+.4
+    });
+    (function drawBg(){
+      bctx.clearRect(0,0,W,H);
+      for(const p of pts){
+        p.x+=p.vx; p.y+=p.vy;
+        if(p.x<0||p.x>W)p.vx*=-1; if(p.y<0||p.y>H)p.vy*=-1;
+        bctx.beginPath(); bctx.arc(p.x,p.y,p.r,0,7);
+        bctx.fillStyle='rgba(0,229,255,.35)'; bctx.fill();
+      }
+      bctx.strokeStyle='rgba(0,229,255,.06)';
+      for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+        const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y;
+        if(dx*dx+dy*dy<12000){
+          bctx.beginPath(); bctx.moveTo(pts[i].x,pts[i].y); bctx.lineTo(pts[j].x,pts[j].y); bctx.stroke();
+        }
+      }
+      requestAnimationFrame(drawBg);
+    })();
+
+    /* ================= ECG 心电 ================= */
+    const ec=document.getElementById('ecg'), ectx=ec.getContext('2d');
+    let ex=0, data=[];
+    function ecgY(x){
+      const t=(x%140)/140;
+      if(t<.1) return 0;
+      if(t<.16) return -Math.sin((t-.1)/.06*Math.PI)*10;
+      if(t<.22) return Math.sin((t-.16)/.06*Math.PI)*22;
+      if(t<.3)  return -Math.sin((t-.22)/.08*Math.PI)*6;
+      return Math.sin(t*Math.PI*4)*1.2;
+    }
+    function resizeEcg(){ ec.width=ec.offsetWidth; ec.height=ec.offsetHeight; }
+    addEventListener('resize', resizeEcg); resizeEcg();
+    (function drawEcg(){
+      ectx.clearRect(0,0,ec.width,ec.height);
+      data.push(ecgY(ex)); ex+=2; if(data.length>ec.width/2) data.shift();
+      ectx.beginPath();
+      data.forEach((v,i)=>{ const x=i*2, y=ec.height/2-v*1.4; i?ectx.lineTo(x,y):ectx.moveTo(x,y); });
+      ectx.strokeStyle='#2dffb5'; ectx.lineWidth=1.6;
+      ectx.shadowColor='#2dffb5'; ectx.shadowBlur=8; ectx.stroke(); ectx.shadowBlur=0;
+      requestAnimationFrame(drawEcg);
+    })();
+
+    /* ================= 时钟 & 实时指标 ================= */
+    setInterval(()=>{
+      document.getElementById('clock').textContent =
+        new Date().toLocaleTimeString('zh-CN',{hour12:false});
+    },1000);
+    setInterval(()=>{
+      const r=(a,b)=>Math.round(a+Math.random()*(b-a));
+      document.getElementById('cpu').textContent = r(18,62)+'%';
+      document.getElementById('mem').textContent = r(31,58)+'%';
+      document.getElementById('net').textContent = r(8,34)+'ms';
+      document.getElementById('temp').textContent = r(41,49)+'°C';
+      document.getElementById('io').textContent = r(120,480)+'MB/s';
+    },900);
+
+    /* ================= 日志 ================= */
+    const logBox=document.getElementById('log');
+    function log(msg, good){
+      const t=new Date().toLocaleTimeString('zh-CN',{hour12:false});
+      const d=document.createElement('div');
+      d.innerHTML=`<span class="t">[${t}]</span><span class="${good?'good':''}">${msg}</span>`;
+      logBox.appendChild(d);
+      while(logBox.children.length>5) logBox.removeChild(logBox.firstChild);
+    }
+
+    /* ================= 初始化流程 ================= */
+    const stages=[
+      {name:'加载核心引擎 CoreEngine v5.2.1', dur:900},
+      {name:'建立数据库连接池 · 64 线程', dur:800},
+      {name:'挂载 DICOM 影像网关 (PACS)', dur:1000},
+      {name:'加载 AI 辅助诊断模型 · 推理引擎', dur:1300},
+      {name:'同步患者档案 · 加密校验 SHA-256', dur:800},
+      {name:'注册接口网关 · 微服务路由', dur:700},
+      {name:'启动安全审计与访问控制', dur:600},
+      {name:'优化完成，准备就绪', dur:500},
+    ];
+    const mods=[...document.querySelectorAll('[data-mod]')];
+    const pct=document.getElementById('pct'), fill=document.getElementById('fill'),
+          stageEl=document.getElementById('stage');
+    let total=stages.reduce((s,x)=>s+x.dur,0), elapsed=0, idx=0;
+
+    function tick(dt){
+      elapsed+=dt;
+      let acc=0, i=0;
+      for(; i<stages.length; i++){ if(elapsed < acc+stages[i].dur) break; acc+=stages[i].dur; }
+      i=Math.min(i, stages.length-1);
+      const local=Math.min(1,(elapsed-acc)/stages[i].dur);
+      if(i>idx){ // 上一阶段完成
+        mods[idx].textContent='OK'; mods[idx].classList.add('ok');
+        log(stages[idx].name+' ... <b>OK</b>', true);
+        document.getElementById('modDone').textContent=(idx+1)+'/7';
+      }
+      idx=i;
+      const p=Math.min(100, Math.round(elapsed/total*100));
+      pct.textContent=p+'%';
+      fill.style.inset='0 '+(100-p)+'% 0 0';
+      stageEl.textContent=stages[i].name+' '+Math.round(local*100)+'%';
+      if(elapsed>=total) finish();
+      else setTimeout(()=>tick(120),120);
+    }
+    setTimeout(()=>tick(0),400);
+    log('BIOS 自检通过 · 引导 MediCore OS', true);
+    log('检测硬件环境 · 双 GPU 加速单元在线');
+
+    function finish(){
+      mods.forEach(m=>{ if(m.textContent==='--'){m.textContent='OK';m.classList.add('ok');} });
+      document.getElementById('modDone').textContent='7/7';
+      pct.textContent='100%'; fill.style.inset='0';
+      stageEl.textContent='全部模块加载成功';
+      log('系统初始化完成，等待进入 …', true);
+      setTimeout(()=>document.getElementById('done').classList.add('show'),500);
+    }
+    function enterSystem(){
+      document.getElementById('done').innerHTML =
+        '<h2 style="color:var(--cyan)">欢迎回来，医生</h2>' +
+        '<p style="color:var(--muted);font-size:13px;letter-spacing:.2em">此处可跳转到主系统页面</p>';
+    }
+</script>
+</body>
+</html>
